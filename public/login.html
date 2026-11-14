@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in · Terrestrial Analog Finder</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0e1217;--pn:#161c24;--pn2:#1e2630;--ln:#2a3340;--tx:#e7eaee;--mu:#8d98a8;--moon:#8cc4e8;--mars:#e0795a}
+*{box-sizing:border-box;margin:0}
+body{font:14px/1.5 'IBM Plex Sans',system-ui,sans-serif;background:var(--bg);color:var(--tx);min-height:100dvh;display:grid;grid-template-columns:1fr 480px}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--moon);outline-offset:2px}
+.side{background:var(--pn);border-right:1px solid var(--ln);padding:48px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden}
+.side::after{content:"";position:absolute;width:520px;height:520px;right:-180px;bottom:-180px;border-radius:50%;background:conic-gradient(var(--moon) 0 50%,var(--mars) 0);opacity:.14}
+.brand{display:flex;align-items:center;gap:12px;font-weight:600;font-size:15px}
+.mark{width:22px;height:22px;border-radius:50%;background:conic-gradient(var(--moon) 0 50%,var(--mars) 0)}
+.side h1{font-size:34px;line-height:1.2;font-weight:600;max-width:15ch;margin-bottom:14px}
+.side p{color:var(--mu);max-width:42ch}
+.side small{color:var(--mu);font-size:12px;position:relative;z-index:1}
+main{display:grid;place-items:center;padding:32px}
+form{width:100%;max-width:360px;display:flex;flex-direction:column;gap:14px}
+h2{font-size:22px;font-weight:600}
+.sub{color:var(--mu);margin:-8px 0 6px}
+label{font-size:12px;color:var(--mu);display:block;margin-bottom:4px}
+input[type=text],input[type=email],input[type=password]{width:100%;background:var(--pn);border:1px solid var(--ln);border-radius:6px;padding:9px 11px}
+input:focus{border-color:var(--moon);outline:0}
+.chk{display:flex;align-items:center;gap:8px;color:var(--mu);font-size:13px}
+.chk input{accent-color:var(--moon)}
+.go{background:var(--tx);color:var(--bg);border:0;border-radius:6px;padding:10px;font-weight:600;cursor:pointer}
+.go:hover{background:#fff}
+.go:disabled{opacity:.6;cursor:wait}
+.err{color:var(--mars);font-size:13px;min-height:20px}
+.sw{color:var(--mu);font-size:13px;text-align:center}
+.sw button{background:none;border:0;color:var(--moon);cursor:pointer;padding:0}
+.sw button:hover{text-decoration:underline}
+[hidden]{display:none!important}
+@media(max-width:860px){body{grid-template-columns:1fr}.side{display:none}}
+</style>
+</head>
+<body>
+<section class="side">
+  <div class="brand"><div class="mark"></div>Terrestrial Analog Finder</div>
+  <div>
+    <h1>Test on Earth what you’ll face on the Moon and Mars.</h1>
+    <p>Score terrestrial sites against lunar and Martian conditions, and keep a catalog of the best analogs for your mission.</p>
+  </div>
+  <small>NASA Space Apps Challenge</small>
+</section>
+
+<main>
+  <form id="f" novalidate>
+    <h2 id="title">Sign in</h2>
+    <p class="sub" id="sub">Welcome back. Enter your details to continue.</p>
+    <div id="nameBox" hidden><label for="fullName">Full name</label><input type="text" id="fullName" autocomplete="name"></div>
+    <div><label for="email">Email</label><input type="email" id="email" autocomplete="email" required></div>
+    <div><label for="pw">Password</label><input type="password" id="pw" autocomplete="current-password" required></div>
+    <div id="pw2Box" hidden><label for="pw2">Confirm password</label><input type="password" id="pw2" autocomplete="new-password"></div>
+    <label class="chk"><input type="checkbox" id="rem" checked> Keep me signed in on this device</label>
+    <div class="err" id="err" role="alert"></div>
+    <button class="go" id="go">Sign in</button>
+    <p class="sw"><span id="swTxt">No account yet?</span> <button type="button" id="sw">Create account</button></p>
+  </form>
+</main>
+
+<script>
+// ============================================================================
+// Đăng nhập / đăng ký qua Node.js backend (api/auth) -> tài khoản lưu trong MySQL
+// (database "railway", bảng users). Không còn dùng localStorage hay Firebase.
+// ============================================================================
+// Node.js server (chạy local: npm start). Dùng cùng hostname với trang web để cookie phiên được gửi kèm.
+const AUTH='api/auth',TARGET='web_test.html';
+const $=id=>document.getElementById(id);
+const f=$('f'),titleEl=$('title'),subEl=$('sub'),nameBox=$('nameBox'),fullName=$('fullName'),
+      email=$('email'),pw=$('pw'),pw2Box=$('pw2Box'),pw2=$('pw2'),rem=$('rem'),
+      err=$('err'),go=$('go'),swTxt=$('swTxt'),sw=$('sw');
+let reg=false;
+
+// Luôn kết thúc phiên cũ khi mở trang login để bắt buộc đăng nhập lại
+// (tài khoản đã đăng ký vẫn được giữ nguyên trong database)
+const clearSession=fetch(AUTH+'?action=logout',{credentials:'include'}).catch(()=>{});
+
+function mode(r){
+  reg=r;
+  titleEl.textContent=go.textContent=r?'Create account':'Sign in';
+  subEl.textContent=r?'Set up access to save and compare analog sites.':'Welcome back. Enter your details to continue.';
+  nameBox.hidden=pw2Box.hidden=!r;
+  swTxt.textContent=r?'Already have an account?':'No account yet?';
+  sw.textContent=r?'Sign in':'Create account';
+  pw.autocomplete=r?'new-password':'current-password';
+  err.textContent='';
+}
+sw.onclick=()=>mode(!reg);
+
+f.onsubmit=async e=>{
+  e.preventDefault();
+  err.textContent='';
+  const em=email.value.trim().toLowerCase();
+  if(!/^\S+@\S+\.\S+$/.test(em))return err.textContent='Enter a valid email address.';
+
+  let name='';
+  if(reg){
+    name=fullName.value.trim();
+    if(!name)return err.textContent='Enter your name.';
+    if(pw.value.length<8)return err.textContent='Use at least 8 characters for your password.';
+    if(pw.value!==pw2.value)return err.textContent='Passwords don’t match.';
+  }else if(!pw.value)return err.textContent='Enter your password.';
+
+  go.disabled=true;
+  try{
+    await clearSession;
+    const res=await fetch(AUTH+'?action='+(reg?'register':'login'),{
+      method:'POST',
+      credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name,email:em,password:pw.value,remember:rem.checked})
+    });
+    const txt=await res.text();
+    let d;
+    try{d=JSON.parse(txt)}catch{
+      console.error('api/auth response:',txt);
+      return err.textContent=`The server did not answer correctly (HTTP ${res.status}). Is the server running?`;
+    }
+    if(!res.ok)return err.textContent=d.error||'Authentication failed.';
+    window.location.href=encodeURI(TARGET);
+  }catch(ex){
+    err.textContent='Cannot reach the server. Is the server running?';
+  }finally{
+    go.disabled=false;
+  }
+};
+</script>
+</body>
+</html>
