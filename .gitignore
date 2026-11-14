@@ -1,0 +1,9 @@
+node_modules/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+# Bản dump database có chứa tài khoản + hash mật khẩu thật: KHÔNG đưa lên GitHub
+*.sql
+!database/schema.sql
